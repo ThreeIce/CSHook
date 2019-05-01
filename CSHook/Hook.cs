@@ -8,24 +8,49 @@ namespace CSHook
     public struct MethodSign
     {
         public int obj;
-        public IntPtr method;
-
-        public MethodSign(int obj, IntPtr method)
+        public string method;
+        //当obj为null时，标识为0
+        public MethodSign(int obj,string method)
         {
             this.obj = obj;
             this.method = method;
         }
-        //当obj为null时，标识为0
-        public MethodSign(object obj,MethodBase method) : 
-            this(obj == null ? 0 : obj.GetHashCode(), method.MethodHandle.GetFunctionPointer())
+        public MethodSign(object obj, string method) : this(obj == null ? 0 : obj.GetHashCode(), method)
         {
 
         }
+        public MethodSign(object obj,MethodInfo method)
+        {
+            this.obj = obj == null ? 0 : obj.GetHashCode();
+            this.method = GetMethodName(method);
+        }
 
-        public MethodSign(MethodBase method) :
-            this(0 , method.MethodHandle.GetFunctionPointer())
+        public MethodSign(MethodInfo method) :
+            this(0 , method)
         {
 
+        }
+        /// <summary>
+        /// 获得方法名，为给每个重载方法都有独特名称，大概格式为ReturnType_MethodName_Param1Type_Param2Type……
+        /// </summary>
+        /// <param name="method">方法</param>
+        /// <returns>方法名</returns>
+        public static string GetMethodName(MethodInfo method)
+        {
+            //节省性能
+            StringBuilder sb = new StringBuilder(method.ReturnType.ToString());
+            sb.Append("_");
+            //方法名
+            sb.Append(method.Name);
+            //参数类型
+            ParameterInfo[] param = method.GetParameters();
+            int length = param.Length;
+            for(int i = 0; i < length; i++)
+            {
+                sb.Append("_");
+                sb.Append(param[i].ParameterType.FullName);
+            }
+            return sb.ToString();
         }
     }
     public static class Hook
@@ -95,7 +120,7 @@ namespace CSHook
         public static void HookAfter(object obj, MethodInfo method, Action<HookArgs> action)
         {
             
-            MethodSign m = new MethodSign(obj == null ? 0 : obj.GetHashCode(), method.MethodHandle.GetFunctionPointer());
+            MethodSign m = new MethodSign(obj, method);
             if (!After.ContainsKey(m))
             {
                 //如果不存在映射列表，创建列表

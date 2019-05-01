@@ -224,12 +224,11 @@ namespace HookInjecter
             //调用Hook.Excute
             //先生成第一个参数对象
             IL.Emit(OpCodes.Ldarg_0);
-            //获得当前方法
-            IL.Emit(OpCodes.Call,
-                type.Module.ImportReference(typeof(MethodBase).GetMethod("GetCurrentMethod")));
-            //创建MethodSign参数，因为是值类型，用Initobj
+            //当前方法名
+            IL.Emit(OpCodes.Ldstr, GetMethodName(method));
+            //创建MethodSign参数
             IL.Emit(OpCodes.Newobj,
-                type.Module.ImportReference(typeof(MethodSign).GetConstructor(new Type[] { typeof(object), typeof(MethodBase) })));
+                type.Module.ImportReference(typeof(MethodSign).GetConstructor(new Type[] { typeof(object), typeof(string) })));
             //生成第二个参数对象
             //将方法对象载出作为第一个参数
             IL.Emit(OpCodes.Ldarg_0);
@@ -396,12 +395,11 @@ namespace HookInjecter
             //调用Hook.Excute
             //先生成第一个参数对象
             IL.Emit(OpCodes.Ldarg_0);
-            //获得当前方法
-            IL.Emit(OpCodes.Call, 
-                type.Module.ImportReference(typeof(MethodBase).GetMethod("GetCurrentMethod")));
+            //当前方法名
+            IL.Emit(OpCodes.Ldstr, GetMethodName(method));
             //创建MethodSign参数，因为是值类型，用Initobj
             IL.Emit(OpCodes.Newobj, 
-                type.Module.ImportReference(typeof(MethodSign).GetConstructor(new Type[]{typeof(object),typeof(MethodBase)})));
+                type.Module.ImportReference(typeof(MethodSign).GetConstructor(new Type[]{typeof(object),typeof(string)})));
             //生成第二个参数对象
             //将方法对象载出作为第一个参数
             IL.Emit(OpCodes.Ldarg_0);
@@ -519,8 +517,6 @@ namespace HookInjecter
             {
                 IL.Emit(OpCodes.Ldarg_0);
             }
-            //将方法的对象入栈
-            IL.Emit(OpCodes.Ldnull);
             //将所有参数挨个压栈
             for (int i = 0; i < length; i++)
             {
@@ -564,14 +560,13 @@ namespace HookInjecter
             IL = method.Body.GetILProcessor();
             //方法首行当然是Nop了
             IL.Emit(OpCodes.Nop);
-            //调用Hook.Excute，先生成第一个参数对象(因为是静态方法，方法对象传null
+            //调用Hook.Excute，先生成第一个参数对象(因为是静态方法，方法对象传null)
             IL.Emit(OpCodes.Ldnull);
-            //获得当前方法
-            IL.Emit(OpCodes.Call,
-                type.Module.ImportReference(typeof(MethodBase).GetMethod("GetCurrentMethod")));
+            //当前方法名
+            IL.Emit(OpCodes.Ldstr, GetMethodName(method));
             //创建MethodSign参数，因为是值类型，用Initobj
             IL.Emit(OpCodes.Newobj,
-                type.Module.ImportReference(typeof(MethodSign).GetConstructor(new Type[] { typeof(object), typeof(MethodBase) })));
+                type.Module.ImportReference(typeof(MethodSign).GetConstructor(new Type[] { typeof(object), typeof(string) })));
             //生成第二个参数对象
             //将方法对象载出作为第一个参数
             IL.Emit(OpCodes.Ldnull);
@@ -634,6 +629,28 @@ namespace HookInjecter
             //返回
             IL.Emit(OpCodes.Ret);
             //注入完毕
+        }
+        /// <summary>
+        /// 使用Mono.cecil的MethoDefinition获得方法名函数
+        /// </summary>
+        /// <param name="method">方法</param>
+        /// <returns>方法名</returns>
+        public static string GetMethodName(MethodDefinition method)
+        {
+            //节省性能
+            StringBuilder sb = new StringBuilder(method.ReturnType.ToString());
+            sb.Append("_");
+            //方法名
+            sb.Append(method.Name);
+            //参数类型
+            var param = method.Parameters;
+            int length = param.Count;
+            for (int i = 0; i < length; i++)
+            {
+                sb.Append("_");
+                sb.Append(param[i].ParameterType.FullName);
+            }
+            return sb.ToString();
         }
     }
 }
